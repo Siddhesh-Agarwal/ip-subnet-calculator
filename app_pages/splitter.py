@@ -1,14 +1,13 @@
 import streamlit as st
 
 from ipcalc import ui
-from ipcalc.core import InputError, format_count, host_info
+from ipcalc.core import InputError, format_count_compact, host_info
 from ipcalc.planner import (
     hosts_for_prefix,
     split_by_count,
     split_by_hosts,
     split_by_prefix,
 )
-from ipcalc.core import parse_input
 
 ui.page_header(
     "Subnet splitter",
@@ -64,7 +63,7 @@ try:
         result = split_by_prefix(parent, int(new_prefix), limit=limit)
         note = (
             f"{len(result):,} subnets of /{int(new_prefix)}. "
-            f"Each has {format_count(hosts_for_prefix(int(new_prefix), parent.version))} "
+            f"Each has {format_count_compact(hosts_for_prefix(int(new_prefix), parent.version))} "
             "usable addresses."
         )
     elif mode == "By subnet count":
@@ -113,12 +112,12 @@ with st.container(horizontal=True):
     st.metric("Subnets", f"{len(result):,}", border=True)
     st.metric(
         "Usable per subnet",
-        info.usable_label if info else "—",
+        info.usable_short if info else "—",
         border=True,
     )
     st.metric(
         "Addresses covered",
-        format_count(sum(network.num_addresses for network in result)),
+        format_count_compact(sum(network.num_addresses for network in result)),
         border=True,
     )
 

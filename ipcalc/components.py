@@ -85,6 +85,7 @@ export default function (component) {
   const hint = parentElement.querySelector("#hint")
   if (label) label.textContent = data?.label ?? ""
   if (value) value.textContent = data?.value ?? ""
+  field.setAttribute("aria-label", `Copy ${data?.label ?? "value"}`)
 
   const copyText = async (text) => {
     try {
@@ -223,7 +224,7 @@ def copy_button(label: str, value: Any, *, key: str) -> None:
 _BINARY = st.components.v2.component(
     "ipcalc_binary_view",
     html="""
-    <div id="wrap" class="wrap">
+    <div id="wrap" class="wrap" role="img">
       <div id="legend" class="legend"></div>
       <div id="bits" class="bits"></div>
       <div id="labels" class="labels"></div>
@@ -258,8 +259,16 @@ _BINARY = st.components.v2.component(
       font-weight: 600;
       color: var(--st-text-color, #111827);
     }
-    .net { background: var(--st-blue-background-color, #dbeafe); color: var(--st-blue-text-color, #1e40af); }
-    .host { background: var(--st-secondary-background-color, #f4f4f5); color: var(--st-gray-color, #71717a); }
+    .net {
+      background: var(--st-blue-background-color, #dbeafe);
+      color: var(--st-blue-text-color, #1e40af);
+      border: 1px solid color-mix(in srgb, var(--st-blue-color, #3b82f6) 35%, transparent);
+    }
+    .host {
+      background: var(--st-gray-background-color, #f1f5f9);
+      color: var(--st-gray-text-color, #334155);
+      border: 1px solid var(--st-border-color, #e2e8f0);
+    }
     .boundary { box-shadow: -2px 0 0 0 var(--st-primary-color, #2563eb); margin-left: 2px; }
     .sep { color: var(--st-gray-color, #71717a); font-weight: 600; margin: 0 .02rem; }
     .labels { display: flex; flex-wrap: wrap; gap: .28rem; margin-top: .25rem; }
@@ -279,6 +288,10 @@ _BINARY = st.components.v2.component(
       const legendEl = parentElement.querySelector("#legend")
       const wrap = parentElement.querySelector("#wrap")
       if (!bitsEl) return
+      wrap.setAttribute(
+        "aria-label",
+        `${bits.length}-bit address with the network/host boundary after bit ${prefix}`
+      )
       bitsEl.textContent = ""
       labelsEl.textContent = ""
       legendEl.textContent = ""
@@ -432,6 +445,7 @@ _IPAM = st.components.v2.component(
       const legend = parentElement.querySelector("#legend")
       if (!bar) return
       bar.textContent = ""
+      bar.setAttribute("aria-label", data?.summary ?? "IPAM allocation map")
       legend.textContent = ""
       if (summary) summary.textContent = data?.summary ?? ""
 

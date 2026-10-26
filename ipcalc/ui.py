@@ -25,10 +25,10 @@ from .core import (
     ParsedInput,
     classify,
     format_count,
+    format_count_compact,
     format_network_row,
     host_info,
     ipv6_slash64,
-    network_type_labels,
     parse_input,
     parse_network_lines,
     parsed_to_dict,
@@ -221,7 +221,14 @@ def table_columns() -> dict[str, str]:
         "input": "Input",
         "status": "Status",
         "family": "Family",
+        "normalized": "Normalized",
         "slash64": "/64s",
+        "first64": "First /64",
+        "last64": "Last /64",
+        "slash64s": "/64s per site",
+        "pointer": "Pointer",
+        "target": "Target",
+        "reason": "Reason",
     }
 
 
@@ -293,7 +300,10 @@ def parse_one(text: str) -> ParsedInput | None:
 
 
 def parse_list(
-    text: str, *, empty_message: str = "Paste at least one network."
+    text: str,
+    *,
+    empty_message: str = "Paste at least one network.",
+    same_family: bool = False,
 ) -> list[IPNetwork] | None:
     networks, errors, warnings = parse_network_lines(text)
     show_messages(errors, warnings)
@@ -301,6 +311,13 @@ def parse_list(
         return None
     if not networks:
         st.info(empty_message, icon=":material/info:")
+        return None
+    if same_family and len({network.version for network in networks}) > 1:
+        st.error(
+            "This operation needs networks from a single address family. "
+            "Split IPv4 and IPv6 into separate runs.",
+            icon=":material/error:",
+        )
         return None
     return networks
 
@@ -321,7 +338,10 @@ def result_fields(parsed: ParsedInput) -> list[tuple[str, Any]]:
         return [
             ("Normalized CIDR", str(network)),
             ("Network address", str(network.network_address)),
-            ("Broadcast address", str(network.broadcast_address)),
+            (
+                "Broadcast address",
+                str(network.broadcast_address) if parsed.prefixlen <= 30 else "—",
+            ),
             ("First usable host", str(info.first) if info.first else "—"),
             ("Last usable host", str(info.last) if info.last else "—"),
             ("Usable hosts", info.usable_label),
@@ -414,12 +434,12 @@ def _v6_network(prefix: int) -> ipaddress.IPv6Network:
 
 def v4_cheat_rows() -> list[dict[str, str]]:
     rows = []
-    for prefix in range(33):
+    for prefix in range(32, -1, -1):
         network = _v4_network(prefix)
         info = host_info(network)
         note = ""
         if prefix == 31:
-            note = "RFC 3021 point-to-point; 2 usable"
+            note = "RFC 3021 · 2 usable"
         elif prefix == 32:
             note = "Single host"
         elif prefix == 0:
@@ -467,7 +487,7 @@ def v6_cheat_rows() -> list[dict[str, str]]:
         rows.append(
             {
                 "prefix": f"/{prefix}",
-                "addresses": info.total_label,
+                "addresses": format_count_compact(info.total),
                 "slash64": ipv6_slash64(prefix)[1],
                 "notes": notes.get(prefix, ""),
             }
@@ -479,9 +499,11 @@ def render_cheat_sheet(
     *, key_prefix: str = "cheat", max_height: int = 1200
 ) -> None:
     st.caption(
-        "IPv4 usable-host counts subtract the network and broadcast addresses "
-        "except for /31 (RFC 3021) and /32. IPv6 has no broadcast address; "
-        "large counts are shown as powers of two."
+        "IPv4 rows run from /32 down to /0, so the most common host masks are "
+        "at the top. Usable-host counts subtract the network and broadcast "
+        "addresses except for /31 (RFC 3021) and /32. IPv6 has no broadcast "
+        "address; large counts are shown as powers of two (or scientific "
+        "notation when the value is not a power of two)."
     )
     version = st.segmented_control(
         "Address family",

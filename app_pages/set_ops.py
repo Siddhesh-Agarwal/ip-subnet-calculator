@@ -1,7 +1,7 @@
 import streamlit as st
 
 from ipcalc import ui
-from ipcalc.core import InputError, format_count
+from ipcalc.core import InputError, format_count_compact
 from ipcalc.netmath import (
     coverage,
     intersect_networks,
@@ -31,8 +31,12 @@ with right:
         key="set-b",
     )
 
-networks_a = ui.parse_list(text_a, empty_message="Add at least one network to list A.")
-networks_b = ui.parse_list(text_b, empty_message="Add at least one network to list B.")
+networks_a = ui.parse_list(
+    text_a, empty_message="Add at least one network to list A.", same_family=True
+)
+networks_b = ui.parse_list(
+    text_b, empty_message="Add at least one network to list B.", same_family=True
+)
 if networks_a is None or networks_b is None:
     st.stop()
 
@@ -68,10 +72,10 @@ except InputError as exc:
 with st.container(horizontal=True):
     st.metric("Operation", label, border=True)
     st.metric("Result prefixes", f"{len(result):,}", border=True)
-    st.metric("Result addresses", format_count(coverage(result)), border=True)
+    st.metric("Result addresses", format_count_compact(coverage(result)), border=True)
     st.metric(
         "A + B addresses",
-        format_count(coverage(networks_a) + coverage(networks_b)),
+        format_count_compact(coverage(networks_a) + coverage(networks_b)),
         border=True,
         help="Sum of both input lists; overlapping space is counted twice.",
     )

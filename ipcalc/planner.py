@@ -10,17 +10,14 @@ from .core import (
     BITS,
     IPNetwork,
     InputError,
-    format_count,
+    format_count_compact,
     host_info,
     ipv6_slash64,
     parse_input,
 )
 from .netmath import (
     coverage,
-    largest_network,
-    merge_ranges,
     network_interval,
-    networks_to_ranges,
     subtract_networks,
 )
 
@@ -80,7 +77,6 @@ def prefix_for_hosts(hosts: int, version: int) -> tuple[int, str]:
     """
     if hosts <= 0:
         raise InputError("Host count must be greater than zero.")
-    bits = BITS[version]
     if version == 4:
         maximum = (1 << 32) - 2
         if hosts > maximum:
@@ -188,7 +184,7 @@ def split_by_hosts(
     if prefix_note:
         note_parts.append(prefix_note)
     note_parts.append(
-        f"Each /{prefix} has {format_count(hosts_for_prefix(prefix, network.version))} "
+        f"Each /{prefix} has {format_count_compact(hosts_for_prefix(prefix, network.version))} "
         "usable addresses."
     )
     return SplitResult(
@@ -424,13 +420,13 @@ def allocation_rows(plan: VLSMPlan) -> list[dict[str, str]]:
         info = host_info(allocation.network)
         row = {
             "name": allocation.name,
-            "requested": format_count(allocation.requested_hosts),
+            "requested": format_count_compact(allocation.requested_hosts),
             "cidr": str(allocation.network),
             "prefix": f"/{allocation.network.prefixlen}",
             "first": str(info.first) if info.first is not None else "",
             "last": str(info.last) if info.last is not None else "",
-            "usable": format_count(info.usable),
-            "total": format_count(info.total),
+            "usable": format_count_compact(info.usable),
+            "total": format_count_compact(info.total),
             "utilization": (
                 f"{allocation.requested_hosts / info.usable:.0%}"
                 if info.usable
@@ -440,11 +436,15 @@ def allocation_rows(plan: VLSMPlan) -> list[dict[str, str]]:
         if allocation.network.version == 4:
             row["mask"] = str(allocation.network.netmask)
             row["wildcard"] = str(allocation.network.hostmask)
-            row["broadcast"] = str(allocation.network.broadcast_address)
+            row["broadcast"] = (
+                str(allocation.network.broadcast_address)
+                if allocation.network.prefixlen <= 30
+                else ""
+            )
         else:
             row["mask"] = ""
             row["wildcard"] = ""
-            row["broadcast"] = str(allocation.network.broadcast_address)
+            row["broadcast"] = ""
         rows.append(row)
     return rows
 

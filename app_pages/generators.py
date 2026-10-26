@@ -3,7 +3,6 @@ import ipaddress
 import streamlit as st
 
 from ipcalc import ui
-from ipcalc.core import host_info
 from ipcalc.generators import (
     acl_wildcard,
     cisco_acl,
@@ -30,13 +29,18 @@ input_text = st.text_input(
 parsed = ui.parse_one(input_text)
 if parsed is None:
     st.stop()
+if parsed.host_bits_set:
+    st.warning(
+        f"Host bits set in the network; snippets use {parsed.normalized}.",
+        icon=":material/warning:",
+    )
 
 default_host = suggested_host(parsed)
 with st.container(horizontal=True, vertical_alignment="bottom"):
     host_text = st.text_input(
         "Example host address",
         value=default_host,
-        key=f"gen-host-{parsed.normalized}",
+        key=f"gen-host-{ui.slugify(parsed.normalized)}",
         help="Used in the interface snippets; it does not have to be the first host.",
     )
     interface = st.text_input(

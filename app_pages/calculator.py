@@ -19,14 +19,16 @@ value = st.text_input(
     placeholder="10.0.0.5/24 · 10.0.0.5 255.255.255.0 · 2001:db8::1/64",
     help=(
         "Accepts CIDR, a dotted netmask, a wildcard mask, or a bare address. "
-        "Bare addresses are treated as /32 (IPv4) or /128 (IPv6)."
+        "Bare addresses are treated as /32 (IPv4) or /128 (IPv6). "
+        "0.0.0.0 is read as a wildcard (host match); use /0 for a default route."
     ),
     icon=":material/route:",
 )
 
 st.caption(
-    "The address is kept in the URL as `?q=…`, so a result can be pasted into "
-    "a ticket or chat. Host bits in the input are flagged and normalized."
+    "The address is kept in the URL as `?q=…` (press Enter or leave the field "
+    "to commit it), so a result can be pasted into a ticket or chat. Host bits "
+    "in the input are flagged and normalized."
 )
 
 if value.strip():

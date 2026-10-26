@@ -1,11 +1,10 @@
 import io
-import json
 
 import pandas as pd
 import streamlit as st
 
 from ipcalc import ui
-from ipcalc.core import InputError, format_count, parse_input
+from ipcalc.core import InputError, format_count_compact
 from ipcalc.planner import (
     Requirement,
     allocation_rows,
@@ -22,17 +21,24 @@ ui.page_header(
 )
 
 PENDING = "vlsm-pending-import"
-EDITOR = "vlsm-editor"
-PARENT = "vlsm-parent"
+VERSION = "vlsm-ui-version"
 
 pending = st.session_state.pop(PENDING, None)
+ui_version = int(st.session_state.get(VERSION, 0))
+if pending:
+    ui_version += 1
+    st.session_state[VERSION] = ui_version
+
+# A new key on import makes the text input and data editor reinitialize from
+# the imported values instead of keeping their previous browser-side state.
+PARENT = f"vlsm-parent-{ui_version}"
+EDITOR = f"vlsm-editor-{ui_version}"
+
 default_parent = "10.0.0.0/16"
 default_rows = ui.requirements_frame()
 if pending:
     default_parent = str(pending["parent"])
     default_rows = ui.requirements_frame(pending["requirements"])
-    st.session_state.pop(EDITOR, None)
-    st.session_state.pop(PARENT, None)
 
 
 def _queue_import(payload: dict) -> None:
@@ -55,12 +61,17 @@ def _handle_upload(uploaded) -> None:
             frame = pd.read_csv(io.BytesIO(uploaded.getvalue()))
             columns = {str(column).lower(): column for column in frame.columns}
             name_col = columns.get("name")
-            hosts_col = columns.get("hosts") or columns.get("host_count")
+            hosts_col = (
+                columns.get("hosts")
+                or columns.get("host_count")
+                or columns.get("requested")
+                or columns.get("requested_hosts")
+            )
             if hosts_col is None:
                 raise InputError(
                     "CSV needs a 'name' column and a 'hosts' or 'host_count' column."
                 )
-            parent_value = default_parent
+            parent_value = st.session_state.get(PARENT, default_parent)
             parent_col = columns.get("parent")
             if parent_col is not None and len(frame):
                 candidate = str(frame[parent_col].iloc[0]).strip()
@@ -153,8 +164,8 @@ plan = vlsm_plan(parent, requirements)
 
 with st.container(horizontal=True):
     st.metric("Parent", str(parent), border=True)
-    st.metric("Allocated", format_count(plan.allocated_coverage), border=True)
-    st.metric("Free", format_count(plan.free_coverage), border=True)
+    st.metric("Allocated", format_count_compact(plan.allocated_coverage), border=True)
+    st.metric("Free", format_count_compact(plan.free_coverage), border=True)
     st.metric("Utilization", f"{plan.utilization:.1%}", border=True)
 
 if plan.unallocated:
@@ -165,7 +176,7 @@ if plan.unallocated:
     unallocated_rows = [
         {
             "name": item.name,
-            "requested": format_count(item.requested_hosts),
+            "requested": format_count_compact(item.requested_hosts),
             "reason": item.note,
         }
         for item in plan.unallocated
@@ -224,10 +235,18 @@ requirement_rows = [
     for requirement in requirements
 ]
 
+export_rows = [
+    {
+        "parent": str(parent),
+        "hosts": allocation.requested_hosts,
+        **row,
+    }
+    for allocation, row in zip(plan.allocations, rows)
+]
 st.space("small")
 ui.copy_and_download(
     payload=payload,
-    rows=rows,
+    rows=export_rows,
     key_prefix="vlsm",
     filename="vlsm-plan",
 )

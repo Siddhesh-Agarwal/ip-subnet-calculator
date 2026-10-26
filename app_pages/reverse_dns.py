@@ -27,6 +27,11 @@ input_text = st.text_input(
 parsed = ui.parse_one(input_text)
 if parsed is None:
     st.stop()
+if parsed.host_bits_set:
+    st.warning(
+        f"Host bits set in the input; the zone is based on {parsed.normalized}.",
+        icon=":material/warning:",
+    )
 
 with st.container(horizontal=True, vertical_alignment="bottom"):
     domain = st.text_input("Domain suffix", value="example.com", key="dns-domain")

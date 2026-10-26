@@ -3,7 +3,7 @@ import ipaddress
 import streamlit as st
 
 from ipcalc import ui
-from ipcalc.core import InputError, format_count
+from ipcalc.core import format_count_compact
 from ipcalc.netmath import coverage, networks_to_ranges, range_to_networks
 
 ui.page_header(
@@ -47,7 +47,7 @@ if direction == "Range → CIDR":
     with st.container(horizontal=True):
         st.metric("Start", str(start), border=True)
         st.metric("End", str(end), border=True)
-        st.metric("Addresses", format_count(addresses), border=True)
+        st.metric("Addresses", format_count_compact(addresses), border=True)
         st.metric("CIDR blocks", f"{len(networks):,}", border=True)
 
     st.caption(
@@ -70,7 +70,7 @@ if direction == "Range → CIDR":
         payload=payload,
         rows=rows,
         key_prefix="range",
-        filename=f"range-{start}-{end}",
+        filename=f"range-{ui.slugify(str(start))}-{ui.slugify(str(end))}",
     )
 else:
     text = st.text_area(
@@ -79,7 +79,7 @@ else:
         height=180,
         key="range-cidrs",
     )
-    networks = ui.parse_list(text)
+    networks = ui.parse_list(text, same_family=True)
     if networks is None:
         st.stop()
     # Build ranges from the actual union, not just the bounding box, so gaps are kept.
@@ -91,14 +91,14 @@ else:
         {
             "start": str(address_cls(start)),
             "end": str(address_cls(end)),
-            "addresses": format_count(end - start + 1),
+            "addresses": format_count_compact(end - start + 1),
         }
         for start, end in ranges
     ]
     with st.container(horizontal=True):
         st.metric("Input networks", f"{len(networks):,}", border=True)
         st.metric("Merged ranges", f"{len(ranges):,}", border=True)
-        st.metric("Addresses", format_count(coverage(networks)), border=True)
+        st.metric("Addresses", format_count_compact(coverage(networks)), border=True)
 
     st.caption(
         "Adjacent and overlapping CIDRs are merged first, so each row is a contiguous "

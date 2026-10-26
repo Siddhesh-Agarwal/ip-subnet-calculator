@@ -18,7 +18,6 @@ from ipcalc.dns import (
 )
 from ipcalc.generators import cloud_rows, suggested_host
 from ipcalc.ipv6_extras import (
-    eui64_from_mac,
     nat64_extract,
     nat64_map,
     parse_mac,
@@ -98,6 +97,16 @@ class HostCountTests(unittest.TestCase):
         self.assertEqual(host_info(ipaddress.ip_network("10.0.0.1/32")).usable, 1)
         self.assertEqual(host_info(ipaddress.ip_network("10.0.0.0/30")).usable, 2)
         self.assertEqual(host_info(ipaddress.ip_network("0.0.0.0/0")).usable, 2**32 - 2)
+
+    def test_broadcast_is_empty_for_31_and_32(self):
+        from ipcalc.core import format_network_row
+
+        self.assertEqual(format_network_row(ipaddress.ip_network("10.0.0.0/31"))["broadcast"], "")
+        self.assertEqual(format_network_row(ipaddress.ip_network("10.0.0.1/32"))["broadcast"], "")
+        self.assertEqual(
+            format_network_row(ipaddress.ip_network("10.0.0.0/30"))["broadcast"],
+            "10.0.0.3",
+        )
 
     def test_ipv6_corner_cases(self):
         self.assertEqual(host_info(ipaddress.ip_network("2001:db8::/127")).usable, 2)
@@ -401,3 +410,48 @@ class BulkAndPlanTests(unittest.TestCase):
         self.assertTrue(any("overlaps" in warning for warning in warnings))
         allocated = sum(segment.width_pct for segment in segments if segment.kind == "allocated")
         self.assertAlmostEqual(allocated, 50.0, places=6)
+
+
+class IPv6VectorTests(unittest.TestCase):
+    def test_ipv6_known_vectors(self):
+        vectors = {
+            "::/0": 2**128,
+            "2001:db8::/32": 2**96,
+            "2001:db8::/64": 2**64,
+            "2001:db8::/127": 2,
+            "2001:db8::1/128": 1,
+        }
+        for cidr, expected in vectors.items():
+            with self.subTest(cidr=cidr):
+                network = ipaddress.ip_network(cidr)
+                self.assertEqual(network.num_addresses, expected)
+                self.assertEqual(host_info(network).total, expected)
+                self.assertEqual(host_info(network).usable, expected)
+
+    def test_ipv6_range_round_trip(self):
+        start = ipaddress.IPv6Address("2001:db8::1")
+        end = ipaddress.IPv6Address("2001:db8::ffff")
+        networks = range_to_networks(start, end)
+        self.assertEqual(networks[0], ipaddress.ip_network("2001:db8::1/128"))
+        self.assertEqual(networks[-1], ipaddress.ip_network("2001:db8::8000/113"))
+        self.assertEqual(
+            sum(network.num_addresses for network in networks),
+            int(end) - int(start) + 1,
+        )
+
+    def test_ipv6_zone_at_64(self):
+        info = zone_for_network(ipaddress.ip_network("2001:db8:1234:5678::/64"))
+        self.assertTrue(info.aligned)
+        self.assertEqual(
+            info.zone,
+            "8.7.6.5.4.3.2.1.8.b.d.0.1.0.0.2.ip6.arpa",
+        )
+
+    def test_pointer_round_trip(self):
+        from ipcalc.dns import address_from_pointer
+
+        for address in (
+            ipaddress.ip_address("192.0.2.1"),
+            ipaddress.ip_address("2001:db8::1"),
+        ):
+            self.assertEqual(address_from_pointer(reverse_pointer(address)), address)

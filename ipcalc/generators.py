@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import ipaddress
 
 from .core import (
     IPv4Address,

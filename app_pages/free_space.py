@@ -1,7 +1,7 @@
 import streamlit as st
 
 from ipcalc import ui
-from ipcalc.core import format_count, host_info
+from ipcalc.core import format_count_compact, host_info
 from ipcalc.netmath import coverage, largest_network
 from ipcalc.planner import free_space
 
@@ -26,6 +26,11 @@ parent_text = st.text_input(
 parsed = ui.parse_one(parent_text)
 if parsed is None:
     st.stop()
+if parsed.host_bits_set:
+    st.warning(
+        f"Host bits set in the parent; using {parsed.normalized}.",
+        icon=":material/warning:",
+    )
 parent = parsed.network
 
 used_text = st.text_area(
@@ -53,8 +58,8 @@ largest = largest_network(gaps)
 
 with st.container(horizontal=True):
     st.metric("Parent", str(parent), border=True)
-    st.metric("Used", format_count(used_coverage), border=True)
-    st.metric("Free", format_count(free_coverage), border=True)
+    st.metric("Used", format_count_compact(used_coverage), border=True)
+    st.metric("Free", format_count_compact(free_coverage), border=True)
     st.metric("Gaps", f"{len(gaps):,}", border=True)
 
 if largest is not None:
@@ -72,8 +77,8 @@ if largest is not None:
                 key="free-largest-cidr",
             )
         st.caption(
-            f"{format_count(largest.num_addresses)} addresses · "
-            f"{info.usable_label} usable hosts"
+            f"{format_count_compact(largest.num_addresses)} addresses · "
+            f"{info.usable_short} usable hosts"
         )
 else:
     st.success("No free space remains in this parent block.", icon=":material/check_circle:")

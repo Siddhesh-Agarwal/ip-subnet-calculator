@@ -1,7 +1,7 @@
 import streamlit as st
 
 from ipcalc import ui
-from ipcalc.core import format_count
+from ipcalc.core import format_count_compact
 from ipcalc.netmath import (
     covering_supernet,
     coverage,
@@ -28,7 +28,7 @@ text = st.text_area(
     key="summarize-input",
     help="One network per line. Overlaps are merged; host bits are normalized.",
 )
-networks = ui.parse_list(text)
+networks = ui.parse_list(text, same_family=True)
 if networks is None:
     st.stop()
 
@@ -65,13 +65,13 @@ summary_coverage = coverage(result)
 with st.container(horizontal=True):
     st.metric("Input networks", f"{len(networks):,}", border=True)
     st.metric("Result prefixes", f"{len(result):,}", border=True)
-    st.metric("Input addresses", format_count(input_coverage), border=True)
-    st.metric("Result addresses", format_count(summary_coverage), border=True)
-    st.metric("Extra addresses", format_count(extra_count), border=True)
+    st.metric("Input addresses", format_count_compact(input_coverage), border=True)
+    st.metric("Result addresses", format_count_compact(summary_coverage), border=True)
+    st.metric("Extra addresses", format_count_compact(extra_count), border=True)
 
 if extra_count:
     st.warning(
-        f"{summary_label} covers **{format_count(extra_count)}** addresses that "
+        f"{summary_label} covers **{format_count_compact(extra_count)}** addresses that "
         "were not in the input list. The extra ranges are shown below.",
         icon=":material/warning:",
     )

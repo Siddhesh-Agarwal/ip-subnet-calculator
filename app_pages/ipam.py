@@ -1,14 +1,12 @@
 import io
-import json
 
 import pandas as pd
 import streamlit as st
 
 from ipcalc import ui
-from ipcalc.core import InputError, format_count
+from ipcalc.core import InputError, format_count_compact
 from ipcalc.netmath import coverage
 from ipcalc.planner import (
-    allocation_rows,
     ipam_segments,
     parse_plan_payload,
     plan_allocation_rows,
@@ -21,17 +19,24 @@ ui.page_header(
 )
 
 PENDING = "ipam-pending-import"
-PARENT = "ipam-parent"
-EDITOR = "ipam-editor"
+VERSION = "ipam-ui-version"
 
 pending = st.session_state.pop(PENDING, None)
+ui_version = int(st.session_state.get(VERSION, 0))
+if pending:
+    ui_version += 1
+    st.session_state[VERSION] = ui_version
+
+# A new key on import reinitializes the text input and data editor from the
+# imported values instead of preserving their previous browser-side state.
+PARENT = f"ipam-parent-{ui_version}"
+EDITOR = f"ipam-editor-{ui_version}"
+
 default_parent = "10.0.0.0/16"
 default_rows = ui.allocations_frame()
 if pending:
     default_parent = str(pending["parent"])
     default_rows = ui.allocations_frame(pending["allocations"])
-    st.session_state.pop(PARENT, None)
-    st.session_state.pop(EDITOR, None)
 
 
 def _queue_import(payload: dict) -> None:
@@ -60,14 +65,17 @@ def _handle_upload(uploaded) -> None:
             if cidr_col is None:
                 raise InputError("CSV needs a 'cidr' column (and optionally 'name').")
             name_col = columns.get("name")
+            kind_col = columns.get("kind")
             parent_col = columns.get("parent")
-            parent_value = default_parent
+            parent_value = st.session_state.get(PARENT, default_parent)
             if parent_col is not None and len(frame):
                 candidate = str(frame[parent_col].iloc[0]).strip()
                 if candidate and candidate.lower() != "nan":
                     parent_value = candidate
             allocations = []
             for index, row in frame.iterrows():
+                if kind_col is not None and str(row[kind_col]).strip().lower() != "allocated":
+                    continue
                 cidr = str(row[cidr_col]).strip()
                 if not cidr or cidr.lower() == "nan":
                     continue
@@ -105,6 +113,11 @@ parent_text = st.text_input(
 parsed = ui.parse_one(parent_text)
 if parsed is None:
     st.stop()
+if parsed.host_bits_set:
+    st.warning(
+        f"Host bits set in the parent; using {parsed.normalized}.",
+        icon=":material/warning:",
+    )
 parent = parsed.network
 
 edited = st.data_editor(
@@ -150,7 +163,7 @@ utilization = allocated_coverage / parent.num_addresses if parent.num_addresses 
 
 with st.container(horizontal=True):
     st.metric("Parent", str(parent), border=True)
-    st.metric("Allocated", format_count(allocated_coverage), border=True)
+    st.metric("Allocated", format_count_compact(allocated_coverage), border=True)
     st.metric("Allocations", f"{len(allocations):,}", border=True)
     st.metric("Utilization", f"{utilization:.1%}", border=True)
 
@@ -164,7 +177,7 @@ for name, network in allocations:
             "kind": "Allocated",
             "name": name,
             "cidr": str(network),
-            "addresses": format_count(network.num_addresses),
+            "addresses": format_count_compact(network.num_addresses),
         }
     )
 for segment in segments:
@@ -174,7 +187,7 @@ for segment in segments:
                 "kind": "Free",
                 "name": "Free",
                 "cidr": str(segment.network),
-                "addresses": format_count(segment.addresses),
+                "addresses": format_count_compact(segment.addresses),
             }
         )
 
@@ -196,10 +209,11 @@ payload = {
     ],
     "free": [str(segment.network) for segment in segments if segment.kind == "free"],
 }
+export_rows = [{"parent": str(parent), **row} for row in rows]
 st.space("small")
 ui.copy_and_download(
     payload=payload,
-    rows=rows,
+    rows=export_rows,
     key_prefix="ipam",
     filename="ipam-plan",
 )

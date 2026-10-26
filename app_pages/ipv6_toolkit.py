@@ -3,7 +3,7 @@ import ipaddress
 import streamlit as st
 
 from ipcalc import ui
-from ipcalc.core import InputError, format_count
+from ipcalc.core import InputError
 from ipcalc.ipv6_extras import (
     nat64_extract,
     nat64_map,
@@ -30,9 +30,9 @@ def _site_row(name: str, network, kind: str) -> dict[str, str]:
         "kind": kind,
         "name": name,
         "cidr": str(network),
-        "first": str(first64),
-        "last": str(last64),
-        "usable": "256 /64s",
+        "first64": str(first64),
+        "last64": str(last64),
+        "slash64s": "256",
     }
 
 

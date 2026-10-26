@@ -297,8 +297,8 @@ def bulk_rows(text: str) -> tuple[list[dict[str, str]], list[str]]:
             "wildcard": parsed.wildcard or "",
             "first": str(info.first) if info.first is not None else "",
             "last": str(info.last) if info.last is not None else "",
-            "usable": info.usable_label,
-            "total": info.total_label,
+            "usable": info.usable_short,
+            "total": info.total_short,
             "kind": address_kind(parsed.address),
             "notes": (
                 f"Host bits set; normalized to {parsed.normalized}"
@@ -346,6 +346,19 @@ def format_count(value: int) -> str:
     return f"{value:,}"
 
 
+def format_count_compact(value: int) -> str:
+    """A table/metric-friendly count.
+
+    Powers of two are shown as ``2^n``; other very large values use scientific
+    notation so a metric card does not turn into a 39-digit wall of text.
+    """
+    if value >= 65_536 and value > 0 and value & (value - 1) == 0:
+        return f"2^{value.bit_length() - 1}"
+    if value >= 1_000_000_000_000:
+        return f"{value:.3e}"
+    return f"{value:,}"
+
+
 def format_bits(value: int, version: int) -> str:
     return format(value, f"0{BITS[version]}b")
 
@@ -361,8 +374,10 @@ def ipv6_slash64(prefixlen: int) -> tuple[int | None, str]:
     """Return the number of /64s in an IPv6 prefix, and a display label."""
     if prefixlen <= 64:
         count = 1 << (64 - prefixlen)
-        return count, f"{format_count(count)} /64s"
-    return None, f"1/{1 << (prefixlen - 64):,} of a /64"
+        return count, (
+            "1 /64" if count == 1 else f"{format_count_compact(count)} /64s"
+        )
+    return None, f"1/2^{prefixlen - 64} of a /64"
 
 
 @dataclass(frozen=True)
@@ -381,6 +396,14 @@ class HostInfo:
     @property
     def usable_label(self) -> str:
         return format_count(self.usable)
+
+    @property
+    def total_short(self) -> str:
+        return format_count_compact(self.total)
+
+    @property
+    def usable_short(self) -> str:
+        return format_count_compact(self.usable)
 
 
 def host_info(network: IPNetwork) -> HostInfo:
@@ -452,14 +475,18 @@ def format_network_row(network: IPNetwork) -> dict[str, str]:
         "prefix": f"/{network.prefixlen}",
         "first": str(hosts.first) if hosts.first is not None else "",
         "last": str(hosts.last) if hosts.last is not None else "",
-        "usable": hosts.usable_label,
-        "total": hosts.total_label,
-        "broadcast": str(network.broadcast_address),
+        "usable": hosts.usable_short,
+        "total": hosts.total_short,
+        "broadcast": "",
     }
     if network.version == 4:
         row["mask"] = str(network.netmask)
         row["wildcard"] = str(network.hostmask)
+        if network.prefixlen <= 30:
+            row["broadcast"] = str(network.broadcast_address)
     else:
+        # IPv6 has no broadcast address; the last address is already shown by
+        # the "last" column.
         row["mask"] = ""
         row["wildcard"] = ""
     return row
@@ -655,7 +682,11 @@ def parsed_to_dict(parsed: ParsedInput) -> dict[str, object]:
     if parsed.version == 4:
         data.update(
             {
-                "broadcast": str(parsed.network.broadcast_address),
+                "broadcast": (
+                    str(parsed.network.broadcast_address)
+                    if parsed.prefixlen <= 30
+                    else None
+                ),
                 "netmask": parsed.netmask,
                 "wildcard": parsed.wildcard,
             }
