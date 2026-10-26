@@ -1,0 +1,79 @@
+# Dual light/dark theme for the subnet calculator.
+[theme]
+showWidgetBorder = true
+showSidebarBorder = true
+baseRadius = "6px"
+buttonRadius = "6px"
+font = "'Inter':https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+codeFontSize = "0.875rem"
+baseFontSize = 14
+baseFontWeight = 400
+headingFontSizes = ["34px", "28px", "23px", "19px", "16px", "14px"]
+headingFontWeights = [600, 600, 600, 600, 600, 600]
+linkUnderline = false
+paddingTop = "1rem"
+paddingBottom = "2rem"
+
+[theme.light]
+primaryColor = "#1D4ED8"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F6F8FA"
+codeBackgroundColor = "#EEF2F7"
+codeTextColor = "#0B1220"
+textColor = "#0B1220"
+linkColor = "#1D4ED8"
+borderColor = "#DCE3EC"
+grayColor = "#64748B"
+blueColor = "#2563EB"
+greenColor = "#15803D"
+redColor = "#B91C1C"
+yellowColor = "#A16207"
+orangeColor = "#C2410C"
+violetColor = "#6D28D9"
+chartCategoricalColors = ["#2563EB", "#0D9488", "#7C3AED", "#D97706", "#DB2777", "#16A34A", "#EA580C"]
+dataframeBorderColor = "#DCE3EC"
+dataframeHeaderBackgroundColor = "#F6F8FA"
+
+[theme.dark]
+primaryColor = "#2563EB"
+backgroundColor = "#0B1220"
+secondaryBackgroundColor = "#131C2E"
+codeBackgroundColor = "#1B2740"
+codeTextColor = "#E6EDF7"
+textColor = "#E6EDF7"
+linkColor = "#93C5FD"
+borderColor = "#24314A"
+grayColor = "#94A3B8"
+blueColor = "#60A5FA"
+greenColor = "#4ADE80"
+redColor = "#F87171"
+yellowColor = "#FACC15"
+orangeColor = "#FB923C"
+violetColor = "#A78BFA"
+chartCategoricalColors = ["#60A5FA", "#2DD4BF", "#A78BFA", "#FBBF24", "#F472B6", "#4ADE80", "#FB923C"]
+dataframeBorderColor = "#24314A"
+dataframeHeaderBackgroundColor = "#131C2E"
+dataframeHeaderTextColor = "#E6EDF7"
+
+[theme.light.sidebar]
+backgroundColor = "#F8FAFC"
+secondaryBackgroundColor = "#EEF2F7"
+codeBackgroundColor = "#E2E8F0"
+textColor = "#0B1220"
+borderColor = "#DCE3EC"
+primaryColor = "#1D4ED8"
+linkColor = "#1D4ED8"
+dataframeHeaderBackgroundColor = "#EEF2F7"
+dataframeBorderColor = "#DCE3EC"
+
+[theme.dark.sidebar]
+backgroundColor = "#070D18"
+secondaryBackgroundColor = "#131C2E"
+codeBackgroundColor = "#1B2740"
+textColor = "#E6EDF7"
+borderColor = "#24314A"
+primaryColor = "#2563EB"
+linkColor = "#93C5FD"
+dataframeHeaderBackgroundColor = "#131C2E"
+dataframeBorderColor = "#24314A"
